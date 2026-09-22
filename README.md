@@ -68,7 +68,7 @@ The backend runs on port `5000` by default. Base URL: `http://localhost:5000/api
 3. Configure your `.env` file with your `MONGODB_URI` and `JWT_SECRET`.
 4. Start the server:
    ```bash
-   node server.js
+   npm start
    ```
 
 ### 2. Setup Frontend
@@ -78,9 +78,9 @@ The backend runs on port `5000` by default. Base URL: `http://localhost:5000/api
    ```
 2. Install dependencies:
    ```bash
-   bun install
+   npm install
    ```
 3. Start the development server:
    ```bash
-   bun run dev
+   npm run dev
    ```
