@@ -1,0 +1,6 @@
+{
+  "name": "Happen",
+  "description": "Where Ideas Meet People. Explore events, build connections, and be part of a vibrant campus community at Sri Vasavi Engineering College.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
