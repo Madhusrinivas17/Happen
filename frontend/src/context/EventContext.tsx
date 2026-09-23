@@ -9,10 +9,10 @@ interface EventContextType {
   video: CampusVideo | null;
   media: CampusMedia[];
   getEventById: (id: string) => CampusEvent | undefined;
-  addEvent: (event: Omit<CampusEvent, 'id'>) => string;
-  updateEvent: (id: string, updatedFields: Partial<CampusEvent>) => void;
-  deleteEvent: (id: string) => void;
-  updateEventStatus: (id: string, status: EventStatus) => void;
+  addEvent: (event: Omit<CampusEvent, 'id'>) => Promise<string>;
+  updateEvent: (id: string, updatedFields: Partial<CampusEvent>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  updateEventStatus: (id: string, status: EventStatus) => Promise<void>;
   addCoordinator: (coord: Omit<CoordinatorUser, 'id' | 'assignedEventsCount' | 'lastActive'>) => void;
   toggleCoordinatorStatus: (id: string) => void;
   removeCoordinator: (id: string) => void;

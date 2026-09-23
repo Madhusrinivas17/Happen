@@ -61,11 +61,15 @@ export const CoordinatorDashboard: React.FC = () => {
     }
   };
 
-  const handleSaveEvent = (data: Omit<CampusEvent, 'id'>) => {
-    if (editingEvent) {
-      updateEvent(editingEvent.id, data);
-    } else {
-      addEvent(data);
+  const handleSaveEvent = async (data: Omit<CampusEvent, 'id'>) => {
+    try {
+      if (editingEvent) {
+        await updateEvent(editingEvent.id, data);
+      } else {
+        await addEvent(data);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Unable to save event.');
     }
   };
 

@@ -2,7 +2,7 @@ const Event = require('../models/Event');
 
 const getEvents = async (req, res) => {
   try {
-    const events = await Event.find({}).populate('organizer', 'name email');
+    const events = await Event.find({}).sort({ createdAt: -1 });
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -11,7 +11,7 @@ const getEvents = async (req, res) => {
 
 const getEventById = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id).populate('organizer', 'name email');
+    const event = await Event.findById(req.params.id);
     if (event) {
       res.json(event);
     } else {
