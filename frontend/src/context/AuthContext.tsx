@@ -14,7 +14,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'college_events_auth_user';
 const TOKEN_KEY = 'college_events_auth_token';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const API_URL = configuredApiUrl
+  ? `${configuredApiUrl.replace(/\/$/, '')}${configuredApiUrl.replace(/\/$/, '').endsWith('/api') ? '' : '/api'}`
+  : (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(() => {
