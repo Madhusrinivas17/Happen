@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, ArrowRight, Bookmark } from 'lucide-react';
+import { MapPin, Clock, ArrowRight } from 'lucide-react';
 import { CampusEvent } from '../types';
 import { StatusBadge } from './StatusBadge';
 
@@ -10,8 +10,6 @@ interface EventCardProps {
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event }) => {
-  const [bookmarked, setBookmarked] = useState(false);
-
   // Parse Month and Day from YYYY-MM-DD
   const getMonthAndDay = (dateStr: string) => {
     try {
@@ -107,22 +105,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
             </div>
           </div>
 
-          {/* Bookmark icon toggle */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setBookmarked(!bookmarked);
-            }}
-            id={`bookmark-btn-${event.id}`}
-            title={bookmarked ? 'Remove bookmark' : 'Bookmark event'}
-            className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Bookmark
-              className={`h-4 w-4 ${bookmarked ? 'fill-indigo-600 text-indigo-600' : ''}`}
-            />
-          </button>
         </div>
 
         {/* Bottom Row: Category Pill & Arrow Link */}

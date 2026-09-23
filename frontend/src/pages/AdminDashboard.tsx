@@ -430,7 +430,7 @@ export const AdminDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Coordinator Access Management</h3>
                   <p className="text-xs text-slate-500">
-                    Shared coordinator credential active: <strong>coordinator@college.edu</strong>
+                    Manage coordinator accounts and event access.
                   </p>
                 </div>
               </div>
@@ -442,7 +442,6 @@ export const AdminDashboard: React.FC = () => {
                   <div>
                     <h4 className="font-bold text-xs text-slate-900">{c.name}</h4>
                     <p className="text-[11px] text-slate-500">{c.department}</p>
-                    <p className="text-[11px] text-indigo-600 mt-1 font-semibold">{c.email}</p>
                   </div>
                   <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                     {c.status}

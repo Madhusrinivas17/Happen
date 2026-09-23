@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AuthUser, UserRole } from '../types';
+import { AuthUser } from '../types';
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (email?: string, password?: string, role?: UserRole) => void;
-  loginAs: (role: 'admin' | 'coordinator') => void;
-  loginWithCredentials: (email: string, role?: 'admin' | 'coordinator') => boolean;
+  login: (email: string, password: string) => Promise<AuthUser | null>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -15,6 +13,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'college_events_auth_user';
+const TOKEN_KEY = 'college_events_auth_token';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(() => {
@@ -38,45 +38,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const loginAs = (role: 'admin' | 'coordinator') => {
-    if (role === 'admin') {
-      setUser({
-        role: 'admin',
-        name: 'Dean / Administrator',
-        email: 'admin@college.edu',
-        department: 'Campus Administration',
+  const login = async (email: string, password: string): Promise<AuthUser | null> => {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-    } else {
-      setUser({
-        role: 'coordinator',
-        name: 'Campus Event Coordinator',
-        email: 'coordinator@college.edu',
-        department: 'Student Activities Council',
-      });
-    }
-  };
 
-  const loginWithCredentials = (email: string, preferredRole?: 'admin' | 'coordinator'): boolean => {
-    const cleanEmail = email.trim().toLowerCase();
-    if (cleanEmail.includes('admin') || preferredRole === 'admin') {
-      loginAs('admin');
-      return true;
-    } else {
-      loginAs('coordinator');
-      return true;
-    }
-  };
+      if (!response.ok) {
+        return null;
+      }
 
-  const login = (email?: string, _password?: string, role?: UserRole) => {
-    if (role === 'admin' || (email && email.toLowerCase().includes('admin'))) {
-      loginAs('admin');
-    } else {
-      loginAs('coordinator');
+      const data = await response.json();
+      const authenticatedUser: AuthUser = {
+        role: data.role.toLowerCase(),
+        name: data.name,
+        email: data.email,
+      };
+
+      setUser(authenticatedUser);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      return authenticatedUser;
+    } catch {
+      return null;
     }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
   };
 
   return (
@@ -84,8 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         login,
-        loginAs,
-        loginWithCredentials,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',

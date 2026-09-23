@@ -52,3 +52,16 @@ export interface CoordinatorUser {
   status: 'Active' | 'Invited' | 'Suspended';
   lastActive: string;
 }
+
+export interface CampusVideo {
+  title: string;
+  description: string;
+  url: string;
+}
+
+export interface CampusMedia {
+  id: string;
+  name: string;
+  url: string;
+  type: 'image' | 'video';
+}

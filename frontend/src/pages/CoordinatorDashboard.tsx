@@ -16,23 +16,29 @@ import {
   ShieldAlert,
   ExternalLink,
   ArrowRight,
+  Video,
+  Save,
 } from 'lucide-react';
 import { useEvents } from '../context/EventContext';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { EventModal } from '../components/EventModal';
 import { BrandLogo, LogoIcon } from '../components/BrandLogo';
-import { CampusEvent, EventStatus } from '../types';
+import { CampusEvent, CampusMedia, CampusVideo, EventStatus } from '../types';
 
 export const CoordinatorDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { events, deleteEvent, addEvent, updateEvent, updateEventStatus } = useEvents();
+  const { events, video, media, updateVideo, addMedia, deleteMedia, deleteEvent, addEvent, updateEvent, updateEventStatus } = useEvents();
   const { logout, isAdmin, user } = useAuth();
 
   const [activeSidebarTab, setActiveSidebarTab] = useState<'dashboard' | 'events' | 'add' | 'settings'>('dashboard');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CampusEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isVideoEditorOpen, setIsVideoEditorOpen] = useState(false);
+  const [videoForm, setVideoForm] = useState<CampusVideo>(video || { title: '', description: '', url: '' });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState('');
 
   const liveCount = events.filter((e) => e.status === 'Live').length;
   const upcomingCount = events.filter((e) => e.status === 'Upcoming' || e.status === 'Starting Soon').length;
@@ -60,6 +66,40 @@ export const CoordinatorDashboard: React.FC = () => {
       updateEvent(editingEvent.id, data);
     } else {
       addEvent(data);
+    }
+  };
+
+  const handleOpenVideoEditor = () => {
+    setVideoForm(video || { title: '', description: '', url: '' });
+    setIsVideoEditorOpen(true);
+  };
+
+  const handleSaveVideo = () => {
+    updateVideo(videoForm);
+    setIsVideoEditorOpen(false);
+  };
+
+  const handleUploadMedia = async () => {
+    if (selectedFiles.length === 0) return;
+    setUploadError('');
+
+    try {
+      const uploadedItems = await Promise.all(selectedFiles.map((file) => new Promise<CampusMedia>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({
+          id: `media-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          name: file.name,
+          url: String(reader.result),
+          type: file.type.startsWith('image/') ? 'image' : 'video',
+        });
+        reader.onerror = () => reject(new Error('Unable to read file'));
+        reader.readAsDataURL(file);
+      })));
+
+      addMedia(uploadedItems);
+      setSelectedFiles([]);
+    } catch {
+      setUploadError('One or more files could not be uploaded.');
     }
   };
 
@@ -211,8 +251,97 @@ export const CoordinatorDashboard: React.FC = () => {
               <Plus className="h-4 w-4" />
               <span>+ Add New Event</span>
             </button>
+            <button
+              onClick={handleOpenVideoEditor}
+              id="coord-post-video-btn"
+              className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white hover:bg-indigo-50 px-5 py-2.5 text-xs font-semibold text-indigo-700 shadow-xs transition-all"
+            >
+              <Video className="h-4 w-4" />
+              <span>Post Video</span>
+            </button>
           </div>
         </div>
+
+        {isVideoEditorOpen && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Post Home Video</h2>
+                <p className="text-xs text-slate-500 mt-1">Add a YouTube, Vimeo, Google Drive, Dropbox, MP4, or WebM video link.</p>
+              </div>
+              <button type="button" onClick={() => setIsVideoEditorOpen(false)} className="text-xs font-semibold text-slate-500 hover:text-slate-900">
+                Cancel
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                required
+                value={videoForm.title}
+                onChange={(event) => setVideoForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Video title"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+              />
+              <input
+                required
+                type="url"
+                value={videoForm.url}
+                onChange={(event) => setVideoForm((current) => ({ ...current, url: event.target.value }))}
+                placeholder="https://example.com/campus-video.mp4"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <textarea
+              value={videoForm.description}
+              onChange={(event) => setVideoForm((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Short description (optional)"
+              rows={2}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+            />
+            <button type="button" onClick={handleSaveVideo} className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500">
+              <Save className="h-3.5 w-3.5" />
+              Publish Video
+            </button>
+            <div className="border-t border-indigo-200 pt-4">
+              <h3 className="text-sm font-bold text-slate-900">Upload Photos or Videos</h3>
+              <p className="text-xs text-slate-500 mt-1">Select any number of image or video files to publish them on Home.</p>
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
+                className="mt-3 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+              />
+              {selectedFiles.length > 0 && (
+                <p className="mt-2 text-xs text-slate-600">{selectedFiles.length} file(s) selected</p>
+              )}
+              {uploadError && <p className="mt-2 text-xs text-rose-600">{uploadError}</p>}
+              <button
+                type="button"
+                onClick={handleUploadMedia}
+                disabled={selectedFiles.length === 0}
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-indigo-300 bg-white px-4 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Video className="h-3.5 w-3.5" />
+                Upload Selected Media
+              </button>
+            </div>
+            {media.length > 0 && (
+              <div className="border-t border-indigo-200 pt-4">
+                <h3 className="text-sm font-bold text-slate-900">Published Media ({media.length})</h3>
+                <div className="mt-2 space-y-2">
+                  {media.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-xs">
+                      <span className="truncate text-slate-700">{item.name}</span>
+                      <button type="button" onClick={() => deleteMedia(item.id)} className="shrink-0 font-semibold text-rose-600 hover:text-rose-800">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Administrator Preview Mode Notice */}
         {isAdmin && (

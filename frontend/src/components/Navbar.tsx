@@ -23,7 +23,7 @@ export const Navbar: React.FC = () => {
     logout();
     navigate('/');
   };
-
+    
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;
     if (path !== '/' && location.pathname.startsWith(path)) return true;

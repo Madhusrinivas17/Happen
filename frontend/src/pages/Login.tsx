@@ -2,37 +2,34 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ShieldAlert, Users, Sparkles, Check, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../types';
 import { BrandLogo, LogoIcon } from '../components/BrandLogo';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [selectedRole, setSelectedRole] = useState<'Admin' | 'Coordinator'>('Admin');
-  const [email, setEmail] = useState('admin@college.edu');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [loginError, setLoginError] = useState('');
 
-  const handleRoleChange = (role: 'Admin' | 'Coordinator') => {
-    setSelectedRole(role);
-    if (role === 'Admin') {
-      setEmail('admin@college.edu');
-      setPassword('admin123');
-    } else {
-      setEmail('coordinator@college.edu');
-      setPassword('coord123');
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(email, password, selectedRole.toLowerCase() as UserRole);
-    if (selectedRole === 'Admin') {
+    setLoginError('');
+    const authenticatedUser = await login(email, password);
+
+    if (!authenticatedUser) {
+      setLoginError('Unable to sign in with those credentials.');
+      return;
+    }
+
+    if (authenticatedUser.role === 'admin') {
       navigate('/admin');
-    } else {
+    } else if (authenticatedUser.role === 'coordinator') {
       navigate('/coordinator');
+    } else {
+      navigate('/');
     }
   };
 
@@ -82,34 +79,6 @@ export const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Role Pills Toggle */}
-            <div className="flex rounded-full bg-slate-900 p-1 border border-slate-800">
-              <button
-                type="button"
-                id="role-admin-toggle"
-                onClick={() => handleRoleChange('Admin')}
-                className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all ${
-                  selectedRole === 'Admin'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                id="role-coord-toggle"
-                onClick={() => handleRoleChange('Coordinator')}
-                className={`flex-1 rounded-full py-2 text-xs font-semibold transition-all ${
-                  selectedRole === 'Coordinator'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Coordinator
-              </button>
-            </div>
-
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email / Username */}
@@ -122,6 +91,7 @@ export const Login: React.FC = () => {
                     type="text"
                     required
                     id="login-username-input"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email or username"
@@ -140,6 +110,7 @@ export const Login: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     required
                     id="login-password-input"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
@@ -173,6 +144,11 @@ export const Login: React.FC = () => {
               </div>
 
               {/* Submit Button */}
+              {loginError && (
+                <p role="alert" className="text-xs text-rose-400">
+                  {loginError}
+                </p>
+              )}
               <button
                 type="submit"
                 id="login-submit-btn"
@@ -183,7 +159,7 @@ export const Login: React.FC = () => {
             </form>
 
             <p className="text-[11px] text-center text-slate-500 pt-2">
-              Select Admin or Coordinator above to switch accounts, then log in to access your dashboard.
+              Your account permissions determine which dashboard you can access.
             </p>
           </div>
         </div>
