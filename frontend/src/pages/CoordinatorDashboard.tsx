@@ -28,7 +28,7 @@ import { CampusEvent, CampusMedia, CampusVideo, EventStatus } from '../types';
 
 export const CoordinatorDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { events, video, media, updateVideo, addMedia, deleteMedia, deleteEvent, addEvent, updateEvent, updateEventStatus } = useEvents();
+  const { events, video, media, addMediaLink, addMedia, deleteMedia, deleteEvent, addEvent, updateEvent, updateEventStatus } = useEvents();
   const { logout, isAdmin, user } = useAuth();
 
   const [activeSidebarTab, setActiveSidebarTab] = useState<'dashboard' | 'events' | 'add' | 'settings'>('dashboard');
@@ -74,8 +74,8 @@ export const CoordinatorDashboard: React.FC = () => {
     setIsVideoEditorOpen(true);
   };
 
-  const handleSaveVideo = () => {
-    updateVideo(videoForm);
+  const handleSaveVideo = async () => {
+    await addMediaLink(videoForm);
     setIsVideoEditorOpen(false);
   };
 
@@ -96,7 +96,7 @@ export const CoordinatorDashboard: React.FC = () => {
         reader.readAsDataURL(file);
       })));
 
-      addMedia(uploadedItems);
+      await addMedia(uploadedItems);
       setSelectedFiles([]);
     } catch {
       setUploadError('One or more files could not be uploaded.');

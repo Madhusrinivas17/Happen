@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthUser } from '../types';
+import { apiUrl } from '../lib/api';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -14,10 +15,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'college_events_auth_user';
 const TOKEN_KEY = 'college_events_auth_token';
-const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
-const API_URL = configuredApiUrl
-  ? `${configuredApiUrl.replace(/\/$/, '')}${configuredApiUrl.replace(/\/$/, '').endsWith('/api') ? '' : '/api'}`
-  : (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(() => {
@@ -43,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<AuthUser | null> => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),

@@ -1,7 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+const ACCOUNT_IDS = {
+  admin: '000000000000000000000001',
+  coordinator: '000000000000000000000002',
+};
+
+const generateToken = (account) => {
+  return jwt.sign({
+    id: account.id,
+    role: account.role,
+    name: account.name,
+    email: account.email,
+  }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
 const loginUser = async (req, res) => {
@@ -10,14 +20,14 @@ const loginUser = async (req, res) => {
     const normalizedEmail = email?.trim().toLowerCase();
     const accounts = [
       {
-        id: 'admin-account',
+        id: ACCOUNT_IDS.admin,
         name: 'Happen Administrator',
         email: process.env.ADMIN_EMAIL?.trim().toLowerCase(),
         password: process.env.ADMIN_PASSWORD,
         role: 'Admin',
       },
       {
-        id: 'coordinator-account',
+        id: ACCOUNT_IDS.coordinator,
         name: 'Happen Coordinator',
         email: process.env.COORDINATOR_EMAIL?.trim().toLowerCase(),
         password: process.env.COORDINATOR_PASSWORD,
@@ -34,7 +44,7 @@ const loginUser = async (req, res) => {
         name: account.name,
         email: account.email,
         role: account.role,
-        token: generateToken(account.id),
+        token: generateToken(account),
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });

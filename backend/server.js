@@ -13,12 +13,19 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://happen-five.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ],
+}));
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/media', require('./routes/mediaRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

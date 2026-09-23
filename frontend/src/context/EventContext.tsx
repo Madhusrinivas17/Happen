@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CampusEvent, CampusMedia, CampusVideo, CoordinatorUser, EventStatus } from '../types';
 import { INITIAL_EVENTS, INITIAL_COORDINATORS } from '../data/events';
+import { apiRequest, resolveApiUrl } from '../lib/api';
 
 interface EventContextType {
   events: CampusEvent[];
@@ -17,6 +18,7 @@ interface EventContextType {
   removeCoordinator: (id: string) => void;
   updateVideo: (video: CampusVideo | null) => void;
   addMedia: (items: CampusMedia[]) => void;
+  addMediaLink: (video: CampusVideo) => Promise<void>;
   deleteMedia: (id: string) => void;
   resetToDefaultEvents: () => void;
 }
@@ -75,6 +77,40 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadSharedData = async () => {
+      try {
+        const [eventsResponse, mediaResponse] = await Promise.all([
+          apiRequest('/events'),
+          apiRequest('/media'),
+        ]);
+        const remoteEvents = await eventsResponse.json();
+        const remoteMedia = await mediaResponse.json();
+
+        if (!cancelled) {
+          setEvents(remoteEvents.map((event: any) => ({
+            ...event,
+            id: event._id || event.id,
+            date: typeof event.date === 'string' ? event.date.slice(0, 10) : event.date,
+            organizer: event.organizer?.name || event.organizer || '',
+            status: event.status || 'Upcoming',
+          })));
+          setMedia(remoteMedia.map((item: CampusMedia) => ({
+            ...item,
+            url: resolveApiUrl(item.url),
+          })));
+        }
+      } catch {
+        // Keep the cached/default data available when the API is temporarily unavailable.
+      }
+    };
+
+    loadSharedData();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     try {
       localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
     } catch {
@@ -114,30 +150,48 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return events.find((e) => e.id === id);
   };
 
-  const addEvent = (eventData: Omit<CampusEvent, 'id'>): string => {
-    const newId = 'evt-' + Date.now();
+  const addEvent = async (eventData: Omit<CampusEvent, 'id'>): Promise<string> => {
+    const response = await apiRequest('/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(eventData),
+    });
+    const savedEvent = await response.json();
     const newEvent: CampusEvent = {
       ...eventData,
-      id: newId,
+      ...savedEvent,
+      id: savedEvent._id || savedEvent.id,
+      date: typeof savedEvent.date === 'string' ? savedEvent.date.slice(0, 10) : eventData.date,
+      organizer: savedEvent.organizer?.name || eventData.organizer,
     };
-    setEvents((prev) => [newEvent, ...prev]);
-    return newId;
+    setEvents((prev) => [newEvent, ...prev.filter((event) => event.id !== newEvent.id)]);
+    return newEvent.id;
   };
 
-  const updateEvent = (id: string, updatedFields: Partial<CampusEvent>) => {
-    setEvents((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
-    );
+  const updateEvent = async (id: string, updatedFields: Partial<CampusEvent>) => {
+    const response = await apiRequest(`/events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedFields),
+    });
+    const savedEvent = await response.json();
+    setEvents((prev) => prev.map((item) => item.id === id ? {
+      ...item,
+      ...updatedFields,
+      ...savedEvent,
+      id: savedEvent._id || savedEvent.id || id,
+      date: typeof savedEvent.date === 'string' ? savedEvent.date.slice(0, 10) : item.date,
+      organizer: savedEvent.organizer?.name || item.organizer,
+    } : item));
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
+    await apiRequest(`/events/${id}`, { method: 'DELETE' });
     setEvents((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateEventStatus = (id: string, status: EventStatus) => {
-    setEvents((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status } : item))
-    );
+  const updateEventStatus = async (id: string, status: EventStatus) => {
+    await updateEvent(id, { status });
   };
 
   const addCoordinator = (
@@ -172,11 +226,32 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setVideo(nextVideo);
   };
 
-  const addMedia = (items: CampusMedia[]) => {
-    setMedia((current) => [...items, ...current]);
+  const addMediaLink = async (nextVideo: CampusVideo) => {
+    const response = await apiRequest('/media/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: nextVideo.title, url: nextVideo.url }),
+    });
+    const savedItem = await response.json();
+    setMedia((current) => [{ ...savedItem, url: resolveApiUrl(savedItem.url) }, ...current]);
+    setVideo(null);
   };
 
-  const deleteMedia = (id: string) => {
+  const addMedia = async (items: CampusMedia[]) => {
+    const uploadedItems: CampusMedia[] = [];
+    for (const item of items) {
+      const blobResponse = await fetch(item.url);
+      const formData = new FormData();
+      formData.append('file', await blobResponse.blob(), item.name);
+      const response = await apiRequest('/media', { method: 'POST', body: formData });
+      const savedItem = await response.json();
+      uploadedItems.push({ ...savedItem, url: resolveApiUrl(savedItem.url) });
+    }
+    setMedia((current) => [...uploadedItems, ...current]);
+  };
+
+  const deleteMedia = async (id: string) => {
+    await apiRequest(`/media/${id}`, { method: 'DELETE' });
     setMedia((current) => current.filter((item) => item.id !== id));
   };
 
@@ -208,6 +283,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         removeCoordinator,
         updateVideo,
         addMedia,
+        addMediaLink,
         deleteMedia,
         resetToDefaultEvents,
       }}
