@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CampusEvent, CampusMedia, CampusVideo, CoordinatorUser, EventStatus } from '../types';
-import { INITIAL_EVENTS, INITIAL_COORDINATORS } from '../data/events';
+import { INITIAL_COORDINATORS } from '../data/events';
 import { apiRequest, resolveApiUrl } from '../lib/api';
 
 interface EventContextType {
@@ -17,31 +17,19 @@ interface EventContextType {
   toggleCoordinatorStatus: (id: string) => void;
   removeCoordinator: (id: string) => void;
   updateVideo: (video: CampusVideo | null) => void;
-  addMedia: (items: CampusMedia[]) => void;
+  addMedia: (items: CampusMedia[]) => Promise<void>;
   addMediaLink: (video: CampusVideo) => Promise<void>;
-  deleteMedia: (id: string) => void;
+  deleteMedia: (id: string) => Promise<void>;
   resetToDefaultEvents: () => void;
 }
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
-const EVENTS_STORAGE_KEY = 'happen_events_v2';
 const COORD_STORAGE_KEY = 'happen_coordinators_v2';
-const VIDEO_STORAGE_KEY = 'happen_home_video_v1';
-const MEDIA_STORAGE_KEY = 'happen_campus_media_v1';
 
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [events, setEvents] = useState<CampusEvent[]>(() => {
-    try {
-      const stored = localStorage.getItem(EVENTS_STORAGE_KEY) || localStorage.getItem('campusnest_events_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return INITIAL_EVENTS;
+    return [];
   });
 
   const [coordinators, setCoordinators] = useState<CoordinatorUser[]>(() => {
@@ -58,22 +46,11 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [video, setVideo] = useState<CampusVideo | null>(() => {
-    try {
-      const stored = localStorage.getItem(VIDEO_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return null;
   });
 
   const [media, setMedia] = useState<CampusMedia[]>(() => {
-    try {
-      const stored = localStorage.getItem(MEDIA_STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+    return [];
   });
 
   useEffect(() => {
@@ -93,7 +70,9 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ...event,
             id: event._id || event.id,
             date: typeof event.date === 'string' ? event.date.slice(0, 10) : event.date,
-            organizer: event.organizer?.name || event.organizer || '',
+            organizer: event.organizer_name || event.organizer?.name || event.organizer || '',
+            registeredCount: event.registered_count ?? event.registeredCount,
+            contactEmail: event.contact_email ?? event.contactEmail,
             status: event.status || 'Upcoming',
           })));
           setMedia(remoteMedia.map((item: CampusMedia) => ({
@@ -112,39 +91,11 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     try {
-      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
-    } catch {
-      // ignore
-    }
-  }, [events]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem(COORD_STORAGE_KEY, JSON.stringify(coordinators));
     } catch {
       // ignore
     }
   }, [coordinators]);
-
-  useEffect(() => {
-    try {
-      if (video) {
-        localStorage.setItem(VIDEO_STORAGE_KEY, JSON.stringify(video));
-      } else {
-        localStorage.removeItem(VIDEO_STORAGE_KEY);
-      }
-    } catch {
-      // ignore
-    }
-  }, [video]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(media));
-    } catch {
-      // ignore
-    }
-  }, [media]);
 
   const getEventById = (id: string) => {
     return events.find((e) => e.id === id);
@@ -163,6 +114,8 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: savedEvent._id || savedEvent.id,
       date: typeof savedEvent.date === 'string' ? savedEvent.date.slice(0, 10) : eventData.date,
       organizer: savedEvent.organizer?.name || eventData.organizer,
+      registeredCount: savedEvent.registered_count ?? eventData.registeredCount,
+      contactEmail: savedEvent.contact_email ?? eventData.contactEmail,
     };
     setEvents((prev) => [newEvent, ...prev.filter((event) => event.id !== newEvent.id)]);
     return newEvent.id;
@@ -182,6 +135,8 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: savedEvent._id || savedEvent.id || id,
       date: typeof savedEvent.date === 'string' ? savedEvent.date.slice(0, 10) : item.date,
       organizer: savedEvent.organizer?.name || item.organizer,
+      registeredCount: savedEvent.registered_count ?? item.registeredCount,
+      contactEmail: savedEvent.contact_email ?? item.contactEmail,
     } : item));
   };
 
@@ -256,14 +211,9 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetToDefaultEvents = () => {
-    setEvents(INITIAL_EVENTS);
+    setEvents([]);
     setCoordinators(INITIAL_COORDINATORS);
-    try {
-      localStorage.removeItem(EVENTS_STORAGE_KEY);
-      localStorage.removeItem(COORD_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    localStorage.removeItem(COORD_STORAGE_KEY);
   };
 
   return (

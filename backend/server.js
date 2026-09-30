@@ -1,14 +1,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
+dotenv.config();
 const cors = require('cors');
-const connectDB = require('./config/db');
+const supabase = require('./config/supabase');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 
-dotenv.config();
-
-// Connect to MongoDB
-connectDB();
+// Supabase is initialized by the controllers through config/supabase.js.
 
 const app = express();
 
@@ -28,8 +26,10 @@ app.use('/api/events', eventRoutes);
 app.use('/api/media', require('./routes/mediaRoutes'));
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ message: 'Backend is running successfully' });
+app.get('/api/health', async (req, res) => {
+  const { error } = await supabase.from('events').select('id').limit(1);
+  if (error) return res.status(503).json({ message: 'Supabase connection failed', error: error.message });
+  res.status(200).json({ message: 'Backend and Supabase are running successfully' });
 });
 
 const PORT = process.env.PORT || 5000;

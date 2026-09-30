@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const ACCOUNT_IDS = {
-  admin: '000000000000000000000001',
-  coordinator: '000000000000000000000002',
+  admin: 'admin-account',
+  coordinator: 'coordinator-account',
 };
 
 const generateToken = (account) => {
