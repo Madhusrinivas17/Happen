@@ -19,6 +19,10 @@ export const apiRequest = async (path: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
   Object.entries(authHeaders()).forEach(([key, value]) => headers.set(key, value));
   const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  if (response.status === 401) {
+    localStorage.removeItem('college_events_auth_user');
+    localStorage.removeItem('college_events_auth_token');
+  }
   if (!response.ok) {
     throw new Error((await response.text()) || `Request failed with status ${response.status}`);
   }
