@@ -11,12 +11,19 @@ const eventRoutes = require('./routes/eventRoutes');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'https://happen-five.vercel.app',
+  'https://happen-j3gr5ppyr-madhusrinivas17s-projects.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  ...(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
 app.use(cors({
-  origin: [
-    'https://happen-five.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ],
+  origin: [...new Set(allowedOrigins)],
 }));
 app.use(express.json());
 
