@@ -75,10 +75,14 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             contactEmail: event.contact_email ?? event.contactEmail,
             status: event.status || 'Upcoming',
           })));
-          setMedia(remoteMedia.map((item: CampusMedia) => ({
+          const loadedMedia = remoteMedia.map((item: CampusMedia) => ({
             ...item,
             url: resolveApiUrl(item.url),
-          })));
+          }));
+          setMedia((current) => {
+            const currentIds = new Set(current.map((item) => item.id));
+            return [...current, ...loadedMedia.filter((item: CampusMedia) => !currentIds.has(item.id))];
+          });
         }
       } catch {
         // Keep the cached/default data available when the API is temporarily unavailable.
@@ -193,16 +197,15 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addMedia = async (items: CampusMedia[]) => {
-    const uploadedItems: CampusMedia[] = [];
     for (const item of items) {
       const blobResponse = await fetch(item.url);
       const formData = new FormData();
       formData.append('file', await blobResponse.blob(), item.name);
       const response = await apiRequest('/media', { method: 'POST', body: formData });
       const savedItem = await response.json();
-      uploadedItems.push({ ...savedItem, url: resolveApiUrl(savedItem.url) });
+      const uploadedItem = { ...savedItem, url: resolveApiUrl(savedItem.url) };
+      setMedia((current) => [uploadedItem, ...current.filter((existing) => existing.id !== uploadedItem.id)]);
     }
-    setMedia((current) => [...uploadedItems, ...current]);
   };
 
   const deleteMedia = async (id: string) => {

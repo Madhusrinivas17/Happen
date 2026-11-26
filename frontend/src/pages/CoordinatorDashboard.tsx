@@ -39,6 +39,7 @@ export const CoordinatorDashboard: React.FC = () => {
   const [videoForm, setVideoForm] = useState<CampusVideo>(video || { title: '', description: '', url: '' });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const liveCount = events.filter((e) => e.status === 'Live').length;
   const upcomingCount = events.filter((e) => e.status === 'Upcoming' || e.status === 'Starting Soon').length;
@@ -84,8 +85,9 @@ export const CoordinatorDashboard: React.FC = () => {
   };
 
   const handleUploadMedia = async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0 || isUploadingMedia) return;
     setUploadError('');
+    setIsUploadingMedia(true);
 
     try {
       const uploadedItems = await Promise.all(selectedFiles.map((file) => new Promise<CampusMedia>((resolve, reject) => {
@@ -104,6 +106,8 @@ export const CoordinatorDashboard: React.FC = () => {
       setSelectedFiles([]);
     } catch {
       setUploadError('One or more files could not be uploaded.');
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
@@ -322,11 +326,11 @@ export const CoordinatorDashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={handleUploadMedia}
-                disabled={selectedFiles.length === 0}
+                disabled={selectedFiles.length === 0 || isUploadingMedia}
                 className="mt-3 inline-flex items-center gap-2 rounded-full border border-indigo-300 bg-white px-4 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Video className="h-3.5 w-3.5" />
-                Upload Selected Media
+                {isUploadingMedia ? 'Uploading Media...' : 'Upload Selected Media'}
               </button>
             </div>
             {media.length > 0 && (
